@@ -226,17 +226,6 @@ Mobile App (Flutter)  ←──REST API──→  Flask/FastAPI Server  ←─�
 
 ---
 
-## 📸 Screenshots
-
-### ML Pipeline Output
-
-*Add screenshots into your `/assets` folder and update links below:*
-
-
-### Live Dashboard
-
----
-
 ## 🧪 Testing
 
 ```bash
