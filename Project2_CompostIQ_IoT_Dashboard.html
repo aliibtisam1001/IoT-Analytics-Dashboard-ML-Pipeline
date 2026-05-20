@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CompostIQ — IoT Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --green: #3fb950;
+    --green-dim: #238636;
+    --blue: #58a6ff;
+    --orange: #f0883e;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --text: #e6edf3;
+    --text-sub: #8b949e;
+    --text-dim: #484f58;
+    --accent: #2ea043;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .topbar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #1a3d2b, var(--accent));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 12px;
+    color: var(--text-sub);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse-green 2s infinite;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63,185,80,0.4); }
+    50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(63,185,80,0); }
+  }
+
+  .dashboard {
+    padding: 24px 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .page-sub {
+    font-size: 13px;
+    color: var(--text-sub);
+    margin-bottom: 24px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* STAT CARDS */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    transition: border-color 0.2s;
+  }
+
+  .stat-card:hover { border-color: var(--green); }
+
+  .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-sub);
+    margin-bottom: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .stat-value.green { color: var(--green); }
+  .stat-value.blue { color: var(--blue); }
+  .stat-value.orange { color: var(--orange); }
+  .stat-value.purple { color: var(--purple); }
+
+  .stat-trend {
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-top: 6px;
+  }
+
+  .stat-trend.up { color: var(--green); }
+  .stat-trend.down { color: var(--red); }
+
+  /* CHART CARDS */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .chart-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .chart-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .chart-subtitle {
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-top: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 99px;
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-green { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-orange { background: rgba(240,136,62,0.15); color: var(--orange); border: 1px solid rgba(240,136,62,0.3); }
+  .badge-red { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .badge-blue { background: rgba(88,166,255,0.15); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* TABLE */
+  .table-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    padding: 10px 20px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-sub);
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: left;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--text);
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 600;
+  }
+
+  .pill-green { background: rgba(63,185,80,0.15); color: var(--green); }
+  .pill-orange { background: rgba(240,136,62,0.15); color: var(--orange); }
+  .pill-red { background: rgba(248,81,73,0.15); color: var(--red); }
+
+  /* ML PREDICTION PANEL */
+  .prediction-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .pred-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .pred-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pred-icon {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  .pred-icon.ml { background: rgba(188,140,255,0.15); }
+  .pred-icon.iot { background: rgba(88,166,255,0.15); }
+
+  .pred-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    font-size: 13px;
+  }
+
+  .pred-row:last-child { border-bottom: none; }
+  .pred-key { color: var(--text-sub); font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+  .pred-val { color: var(--text); font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+
+  /* Timeline */
+  .footer-bar {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-sub);
+    margin-bottom: 24px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🌱</div>
+    CompostIQ — IoT Dashboard
+  </div>
+  <div class="topbar-right">
+    <span id="clock">Loading...</span>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      Live Data
+    </div>
+  </div>
+</div>
+
+<div class="dashboard">
+  <div class="page-title">Smart Composting Analytics</div>
+  <div class="page-sub">// AI + IoT Research Project · Albukhary International University · ESP32 Sensor Network</div>
+
+  <!-- STAT CARDS -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Active Sensors</div>
+      <div class="stat-value green" id="sensorCount">6</div>
+      <div class="stat-trend up">↑ All ESP32 online</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Temperature</div>
+      <div class="stat-value blue" id="avgTemp">54°C</div>
+      <div class="stat-trend up">↑ Optimal range</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ML Accuracy</div>
+      <div class="stat-value purple">R²=0.94</div>
+      <div class="stat-trend up">↑ Random Forest model</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">CO₂ Alerts</div>
+      <div class="stat-value orange" id="alertCount">1</div>
+      <div class="stat-trend down">⚠ Bin #2 requires action</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Temperature Over Time (°C)</div>
+          <div class="chart-subtitle">// Real-time ESP32 sensor feed — last 24 readings</div>
+        </div>
+        <span class="badge badge-green">Live</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="tempChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Compost Health</div>
+          <div class="chart-subtitle">// Sensor parameter scores</div>
+        </div>
+        <span class="badge badge-blue">Radar</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="radarChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ML PREDICTION + IOT STATUS -->
+  <div class="prediction-grid">
+    <div class="pred-card">
+      <div class="pred-title">
+        <div class="pred-icon ml">🤖</div>
+        ML Model Output
+      </div>
+      <div class="pred-row"><span class="pred-key">Model</span><span class="pred-val">Random Forest Regressor</span></div>
+      <div class="pred-row"><span class="pred-key">R² Score</span><span class="pred-val" style="color:var(--green)">0.9412</span></div>
+      <div class="pred-row"><span class="pred-key">MAE</span><span class="pred-val">2.34°C</span></div>
+      <div class="pred-row"><span class="pred-key">Features</span><span class="pred-val">temp, pH, moisture, CO₂</span></div>
+      <div class="pred-row"><span class="pred-key">Predicted Ready</span><span class="pred-val" style="color:var(--green)">Bin #1: Jun 4</span></div>
+      <div class="pred-row"><span class="pred-key">Next Turn Alert</span><span class="pred-val" style="color:var(--orange)">Bin #2: Today</span></div>
+    </div>
+
+    <div class="pred-card">
+      <div class="pred-title">
+        <div class="pred-icon iot">📡</div>
+        ESP32 Device Status
+      </div>
+      <div class="pred-row"><span class="pred-key">Device A (Bin 1)</span><span class="pred-val" style="color:var(--green)">● Connected</span></div>
+      <div class="pred-row"><span class="pred-key">Device B (Bin 2)</span><span class="pred-val" style="color:var(--orange)">⚠ Alert</span></div>
+      <div class="pred-row"><span class="pred-key">Device C (Bin 3)</span><span class="pred-val" style="color:var(--green)">● Connected</span></div>
+      <div class="pred-row"><span class="pred-key">Protocol</span><span class="pred-val">MQTT over WiFi</span></div>
+      <div class="pred-row"><span class="pred-key">Data Rate</span><span class="pred-val">Every 5 min</span></div>
+      <div class="pred-row"><span class="pred-key">Cloud Sync</span><span class="pred-val" style="color:var(--green)">Firebase RT DB</span></div>
+    </div>
+  </div>
+
+  <!-- SENSOR DATA TABLE -->
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <div style="font-size:14px;font-weight:700;">Recent Sensor Readings</div>
+        <div style="font-size:11px;color:var(--text-sub);font-family:'IBM Plex Mono',monospace;margin-top:2px;">// Last 6 data points from ESP32 network</div>
+      </div>
+      <span class="badge badge-green">Auto-refresh 30s</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Device</th>
+          <th>Temp (°C)</th>
+          <th>Moisture (%)</th>
+          <th>pH</th>
+          <th>CO₂</th>
+          <th>Status</th>
+          <th>ML Prediction</th>
+        </tr>
+      </thead>
+      <tbody id="sensorTable">
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer-bar">
+    <span>// Built with Python (Pandas, Scikit-Learn) · ESP32 · Firebase · Flutter Mobile App</span>
+    <span>Ali Ibtisam — AIU Research Project · 2026</span>
+  </div>
+</div>
+
+<script>
+// === CLOCK ===
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-MY', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// === TEMPERATURE CHART ===
+const tempCtx = document.getElementById('tempChart').getContext('2d');
+const labels = Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}:00`).slice(-12);
+const tempData = [48,51,53,56,58,60,62,59,57,55,54,54];
+const tempChart = new Chart(tempCtx, {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Bin #1',
+      data: tempData,
+      borderColor: '#3fb950',
+      backgroundColor: 'rgba(63,185,80,0.1)',
+      tension: 0.4,
+      fill: true,
+      pointRadius: 3,
+      pointBackgroundColor: '#3fb950',
+    },{
+      label: 'Bin #2',
+      data: [44,47,50,55,60,65,68,70,71,69,68,68],
+      borderColor: '#f0883e',
+      backgroundColor: 'rgba(240,136,62,0.05)',
+      tension: 0.4,
+      fill: false,
+      pointRadius: 3,
+      pointBackgroundColor: '#f0883e',
+      borderDash: [4,2]
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: { color: '#8b949e', font: { family: 'IBM Plex Mono', size: 11 }, boxWidth: 12 }
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#484f58', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#21262d' } },
+      y: { ticks: { color: '#484f58', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#21262d' } }
+    }
+  }
+});
+
+// === RADAR CHART ===
+const radarCtx = document.getElementById('radarChart').getContext('2d');
+new Chart(radarCtx, {
+  type: 'radar',
+  data: {
+    labels: ['Temp', 'Moisture', 'pH', 'Aeration', 'CO₂', 'Microbial'],
+    datasets: [{
+      label: 'Bin #1',
+      data: [90, 85, 75, 88, 70, 92],
+      borderColor: '#3fb950',
+      backgroundColor: 'rgba(63,185,80,0.2)',
+      pointBackgroundColor: '#3fb950',
+    },{
+      label: 'Bin #2',
+      data: [65, 80, 60, 70, 35, 75],
+      borderColor: '#f0883e',
+      backgroundColor: 'rgba(240,136,62,0.1)',
+      pointBackgroundColor: '#f0883e',
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#8b949e', font: { family: 'IBM Plex Mono', size: 10 }, boxWidth: 10 } }
+    },
+    scales: {
+      r: {
+        ticks: { display: false, backdropColor: 'transparent' },
+        grid: { color: '#30363d' },
+        pointLabels: { color: '#8b949e', font: { family: 'IBM Plex Mono', size: 10 } }
+      }
+    }
+  }
+});
+
+// === TABLE DATA ===
+const readings = [
+  { time:'14:55:02', device:'ESP32-A (Bin 1)', temp:54, moisture:61, ph:6.8, co2:'Normal', status:'ok', pred:'On Track' },
+  { time:'14:50:02', device:'ESP32-B (Bin 2)', temp:68, moisture:58, ph:7.1, co2:'HIGH', status:'alert', pred:'Turn Today' },
+  { time:'14:45:02', device:'ESP32-C (Bin 3)', temp:51, moisture:65, ph:6.5, co2:'Normal', status:'ok', pred:'On Track' },
+  { time:'14:40:02', device:'ESP32-A (Bin 1)', temp:53, moisture:62, ph:6.7, co2:'Normal', status:'ok', pred:'On Track' },
+  { time:'14:35:02', device:'ESP32-B (Bin 2)', temp:67, moisture:59, ph:7.0, co2:'Elevated', status:'warn', pred:'Monitor' },
+  { time:'14:30:02', device:'ESP32-C (Bin 3)', temp:50, moisture:64, ph:6.6, co2:'Normal', status:'ok', pred:'On Track' },
+];
+
+const tbody = document.getElementById('sensorTable');
+readings.forEach(r => {
+  const statusHtml = r.status === 'ok'
+    ? `<span class="status-pill pill-green">● Optimal</span>`
+    : r.status === 'warn'
+    ? `<span class="status-pill pill-orange">⚠ Monitor</span>`
+    : `<span class="status-pill pill-red">🔴 Alert</span>`;
+  const co2Color = r.co2 === 'HIGH' ? 'var(--red)' : r.co2 === 'Elevated' ? 'var(--orange)' : 'var(--green)';
+  tbody.innerHTML += `
+    <tr>
+      <td>${r.time}</td>
+      <td>${r.device}</td>
+      <td style="color:${r.temp > 65 ? 'var(--orange)' : 'var(--green)'}">${r.temp}</td>
+      <td>${r.moisture}</td>
+      <td>${r.ph}</td>
+      <td style="color:${co2Color};font-weight:600">${r.co2}</td>
+      <td>${statusHtml}</td>
+      <td style="color:${r.pred === 'On Track' ? 'var(--green)' : r.pred === 'Monitor' ? 'var(--orange)' : 'var(--red)'}">${r.pred}</td>
+    </tr>`;
+});
+
+// Simulate live temperature update
+setInterval(() => {
+  const newTemp = Math.round(52 + Math.random() * 4);
+  document.getElementById('avgTemp').textContent = newTemp + '°C';
+  const newData = [...tempChart.data.datasets[0].data.slice(1), newTemp];
+  tempChart.data.datasets[0].data = newData;
+  tempChart.update('none');
+}, 3000);
+</script>
+</body>
+</html>
